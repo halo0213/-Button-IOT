@@ -1,4 +1,4 @@
-"""ESP32 serial -> localhost websocket; serves the game page."""
+﻿"""ESP32 serial -> localhost websocket; serves the game page."""
 import argparse
 import asyncio
 import json
@@ -135,7 +135,6 @@ if __name__ == '__main__':
     app.router.add_get('/gm', lambda request: web.FileResponse(ROOT / 'gm.html'))
     app.router.add_get('/gm.html', lambda request: web.FileResponse(ROOT / 'gm.html'))
     app.router.add_get('/私库榜书.woff2', lambda request: web.FileResponse(ROOT / '私库榜书.woff2') if (ROOT / '私库榜书.woff2').exists() else web.Response(status=404))
-    app.router.add_static('/bgm/', path=str(ROOT / 'bgm'), show_index=False)
     app.router.add_get('/ws', ws_handler)
     async def health(request):
         return web.json_response({'server':'ok','browser_connections':len(clients),'port':app['port']})
