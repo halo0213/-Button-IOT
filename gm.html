@@ -52,7 +52,27 @@ main.gm-layout{max-width:none;width:100%;margin:0;display:grid;grid-template-col
  <div id="virtualHeld">GM模拟长按中：无</div>
  </div>
 </div><p><a href="/" target="_blank">打开玩家投影画面</a></p></aside></main><script>
-let ws,retry;const status=document.getElementById('status');function connect(){ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');ws.onopen=()=>{status.textContent='● 已连接 · GM控制台可用';status.classList.add('on');ws.send(JSON.stringify({type:'role',role:'gm'}))};ws.onclose=()=>{status.textContent='● 连接断开，正在重连';status.classList.remove('on');retry=setTimeout(connect,1500)};ws.onerror=()=>{status.textContent='连接失败';status.classList.remove('on')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}if(m.type==='state')renderState(m.state);if(m.type==='button')showButton(m);if(m.type==='player_online'&&!m.online)offline()}}
+const VAULT_ROLE='gm';
+
+  function vaultConnection(){
+    const local=['localhost','127.0.0.1'].includes(location.hostname);
+    const defaultHost=local?location.origin:'';
+    let host=sessionStorage.getItem('vaultTunnelUrl')||defaultHost;
+    if(!host){host=prompt('请输入Cloudflare Tunnel网址（https://xxx.trycloudflare.com）','')||'';}
+    host=host.trim().replace(/\/+$/,'');
+    if(!/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(host)&&!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host)){
+      alert('联机地址必须是HTTPS Tunnel网址，或本机localhost');return null;
+    }
+    sessionStorage.setItem('vaultTunnelUrl',host);
+    const role=VAULT_ROLE;
+    const storageKey='vault'+(role==='gm'?'Gm':'Player')+'Key';
+    let key=sessionStorage.getItem(storageKey)||prompt(role==='gm'?'请输入GM专用口令':'请输入玩家投影专用口令','')||'';
+    if(!key){alert('没有口令，不能连接');return null;}
+    sessionStorage.setItem(storageKey,key);
+    return {url:host.replace(/^http/,'ws')+'/ws',key};
+  }
+  // 修改Tunnel地址或口令：在浏览器控制台执行 sessionStorage.clear() 后刷新
+let ws,retry;const status=document.getElementById('status');function connect(){const cfg=vaultConnection();if(!cfg)return;ws=new WebSocket(cfg.url);ws.onopen=()=>{status.textContent='● 正在核验GM身份…';ws.send(JSON.stringify({type:'role',role:'gm',key:sessionStorage.getItem('vaultGmKey')}))};ws.onclose=()=>{status.textContent='● 连接断开，正在重连';status.classList.remove('on');retry=setTimeout(connect,1500)};ws.onerror=()=>{status.textContent='连接失败';status.classList.remove('on')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}if(m.type==='auth'){if(m.ok){status.textContent='● 已认证 · GM控制台可用';status.classList.add('on')}else{status.textContent='● GM口令错误';sessionStorage.removeItem('vaultGmKey')}}if(m.type==='state')renderState(m.state);if(m.type==='button')showButton(m);if(m.type==='player_online'&&!m.online)offline()}}
 const el=id=>document.getElementById(id);let lastStateAt=0;
 function offline(){el('startInfo').textContent='玩家画面已断线';}
 function renderState(s){

@@ -1,7 +1,9 @@
-﻿"""ESP32 serial -> localhost websocket; serves the game page."""
+"""ESP32 serial -> localhost websocket; serves the game page."""
 import argparse
 import asyncio
 import json
+import os
+import hmac
 from pathlib import Path
 from aiohttp import web
 import serial
@@ -10,6 +12,10 @@ ROOT = Path(__file__).resolve().parent
 clients = set()
 roles = {}
 latest_state = None
+PLAYER_KEY = os.environ.get('VAULT_PLAYER_KEY','')
+GM_KEY = os.environ.get('VAULT_GM_KEY','')
+if not PLAYER_KEY or not GM_KEY or PLAYER_KEY == GM_KEY:
+    raise SystemExit('请先通过 START_WINDOWS.bat 设置两个不同的联机口令。')
 GM_COMMANDS = {"bell", "remove_error", "skip", "reset", "time30", "time15", "sim_next", "sim_hold", "sim_release"}
 
 async def index(request):
@@ -34,7 +40,15 @@ async def ws_handler(request):
             except (ValueError, TypeError):
                 continue
             if data.get('type') == 'role' and data.get('role') in ('gm','player'):
-                roles[ws] = data['role']
+                requested = data['role']
+                expected = GM_KEY if requested == 'gm' else PLAYER_KEY
+                provided = data.get('key')
+                if not isinstance(provided, str) or not hmac.compare_digest(provided, expected):
+                    await ws.send_json({'type':'auth','ok':False})
+                    await ws.close(code=1008, message=b'Invalid role credential')
+                    break
+                roles[ws] = requested
+                await ws.send_json({'type':'auth','ok':True,'role':requested})
                 if data['role'] == 'gm' and latest_state is not None:
                     await ws.send_str(json.dumps({'type':'state','state':latest_state}))
                 if data['role'] == 'player':
@@ -101,7 +115,7 @@ async def serial_reader(app):
                     continue
                 payload=json.dumps({'type':'button','button':button,'down':parts[2]=='DOWN'})
                 for ws in tuple(clients):
-                    if not ws.closed:
+                    if not ws.closed and roles.get(ws) in ('gm','player'):
                         await ws.send_str(payload)
                 print(f'[BUTTON] {button:02d} {parts[2]} -> {len(clients)} browser(s)', flush=True)
         except (serial.SerialException, OSError) as e:
