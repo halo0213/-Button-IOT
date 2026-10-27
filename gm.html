@@ -1,0 +1,151 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>村长私库 · 管家控制台</title><style>
+@font-face{font-family:私库榜书;src:url('./私库榜书.woff2') format('woff2');font-display:swap}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#1d3440,#09131a 75%);color:#e8e6dd;font-family:私库榜书,'KaiTi','STKaiti',serif;padding:36px 4vw}main{max-width:1120px;margin:auto}h1{text-align:center;color:#e6bf7f;font-size:47.5px;margin:15px 0 6px}p{text-align:center;color:#b6c2c7;font-size:22.5px}#status{text-align:center;color:#f29ca3;margin:18px}#status.on{color:#63dec7} .dashboard{border:1px solid #756649;border-radius:14px;background:#132833;padding:20px;margin-top:20px}.dash-head{display:flex;justify-content:space-between;gap:12px;align-items:center;color:#e6bf7f;font-size:30px}.pill{font-size:20px;border:1px solid #60747c;border-radius:22px;padding:5px 12px;color:#aab7bd}.pill.on{border-color:#63dec7;color:#63dec7}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.metric{background:#1c3540;border:1px solid #48606a;border-radius:9px;padding:12px;text-align:center}.metric span{display:block;color:#aebec4;font-size:20px}.metric b{display:block;font-size:36.25px;color:#e6bf7f;margin-top:6px}.detail{color:#d7e2de;line-height:1.7;font-size:23.75px;margin:12px 0}.bar{height:14px;border-radius:20px;background:#31434a;overflow:hidden;margin:10px 0}.fill{height:100%;width:0;background:#63dec7;transition:width .3s}.bulbs,.boxes{display:flex;justify-content:center;gap:13px;flex-wrap:wrap;margin:12px 0}.bulb{width:25px;height:25px;border-radius:50%;border:2px solid #6b414c;background:#39262c}.bulb.on{background:#f33b4d;box-shadow:0 0 12px #f33b4d}.box{flex:1;min-width:110px;text-align:center;padding:12px 6px;border-radius:9px;background:#18372f;border:1px solid #397963;color:#73d5a9}.box.locked{background:#3a252e;border-color:#a65767;color:#ffa6af}.box.pending{background:#133e53;border-color:#52c9e8;color:#8be9ff}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:32px}.control{font-family:inherit;cursor:pointer;min-height:110px;border-radius:12px;border:1px solid #8a7959;background:linear-gradient(135deg,#213845,#172b36);color:#e6bf7f;font-size:clamp(23.75px,2.5vw,33.75px);padding:12px}.control:hover{border-color:#63dec7;background:#264a51}.control:active{transform:scale(.98)}.danger{border-color:#a45c67;color:#ffb7bd}.minor{font-size:22.5px;color:#9cb4bd;text-align:center;margin-top:24px}a{color:#63dec7}@media(max-width:680px){.metrics{grid-template-columns:repeat(2,1fr)}.dash-head{font-size:23.75px}.detail{font-size:20px}.grid{gap:9px}.control{min-height:94px;font-size:20px}body{padding:20px 10px}}
+/* 玩家原版投影镜像（只读，不会创建第二场游戏） */
+.mirror-wrap{margin-top:20px;border:1px solid #8c7650;border-radius:15px;background:#101d26;padding:16px}
+.mirror-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#e6bf7f;font-size:28px;margin:0 0 12px}
+.mirror-heading small{font-size:17px;color:#aebfc4}
+.mirror-frame{position:relative;aspect-ratio:16/9;width:100%;overflow:hidden;background:#070d12;border:1px solid #5b6470;border-radius:10px}
+#mirror{position:absolute;top:0;left:0;width:1920px;height:1080px;transform-origin:top left;border:0;pointer-events:none}
+.mirror-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-top:12px;font-size:21px;color:#d7e2de}
+#lastButton{color:#63dec7;font-size:25px}#startInfo{color:#e6bf7f}
+@media(max-width:680px){.mirror-heading{font-size:21px}.mirror-heading small{font-size:13px}.mirror-footer{font-size:16px}#lastButton{font-size:19px}}
+
+/* GM左右双栏：左侧实时投影，右侧六个小字号控制按钮 */
+body{padding:18px 1.5vw}
+main.gm-layout{max-width:none;width:100%;margin:0;display:grid;grid-template-columns:minmax(0, 68fr) minmax(320px, 32fr);gap:18px;align-items:start}
+.gm-layout .mirror-wrap{margin:0;padding:12px}
+.gm-layout .mirror-heading{font-size:20px;margin-bottom:8px}
+.gm-layout .mirror-heading small{font-size:12px}
+.gm-layout .mirror-footer{font-size:15px;gap:8px}
+.gm-layout #lastButton{font-size:16px}
+.gm-side{min-width:0;border:1px solid #756649;border-radius:14px;background:#132833;padding:18px 12px}
+.gm-side h1{font-size:clamp(21px,1.6vw,30px);margin:4px 0 12px}
+.gm-side #status{font-size:13px;margin:10px 0 20px}
+.gm-side .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
+.gm-side .control{font-size:clamp(12px,1vw,17px);min-height:75px;padding:8px 3px;border-radius:9px;line-height:1.35}
+.gm-side p{font-size:14px;margin:20px 0 0}
+@media(max-width:950px){main.gm-layout{grid-template-columns:1fr}.gm-side .control{font-size:15px;min-height:65px}.gm-side{padding:14px}}
+
+.gm-side .backup-divider{grid-column:1/-1;display:flex;align-items:center;gap:10px;color:#b7c4c6;font-size:clamp(12px,.85vw,15px);margin:12px 0 3px;text-align:center;white-space:nowrap}
+.gm-side .backup-divider::before,.gm-side .backup-divider::after{content:"";height:1px;background:#607078;flex:1;min-width:8px}
+.gm-side .grid{row-gap:10px}
+.live-backup{grid-column:1/-1;display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid #63717a;border-radius:10px;background:#0d202b}
+.gm-side .live-backup .control{width:100%;min-height:56px;font-size:clamp(13px,1vw,17px)}
+.gm-side .live-backup .next-action{color:#78e2bf;border-color:#4a9e87}
+.gm-side .live-backup button:disabled{opacity:.45;cursor:not-allowed}
+.hold-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.hold-slot{display:flex;flex-direction:column;gap:6px}
+.hold-slot .hold-label{font-size:12px;color:#e6bf7f;text-align:center}
+.gm-side .hold-slot .control{font-size:clamp(12px,.9vw,15px);min-height:50px}
+.hold-slot .control.held{background:#165449;color:#9af5df;border-color:#63dec7}
+.backup-hint{grid-column:1/-1;color:#aebec4;font-size:13px;text-align:center;padding:12px}
+#virtualHeld{font-size:12px;color:#aebec4;text-align:center}
+
+</style></head><body><main class="gm-layout"><section class="mirror-wrap"><div class="mirror-heading"><strong>玩家投影 · 实时同步画面</strong><small>1920 × 1080 · 只读镜像</small></div><div class="mirror-frame" id="mirrorFrame"><iframe id="mirror" title="玩家实时投影画面" sandbox="allow-same-origin" tabindex="-1"></iframe></div><div class="mirror-footer"><span id="lastButton">最近按钮：尚无输入</span><span id="startInfo">启动倒数：等待08号</span></div></section><aside class="gm-side"><h1>村长私库 · 管家控制台</h1><div id="status">正在连接游戏服务器…</div><div class="grid">
+<button class="control danger" data-cmd="bell">触碰红线</button><button class="control" data-cmd="remove_error">删掉一个红灯</button><button class="control danger" data-cmd="reset">重置全部</button>
+<div class="backup-divider"><span>以下为故障备用操作</span></div>
+<button class="control" data-cmd="skip">跳过当前防线</button><button class="control" data-cmd="time30">倒计时30秒</button><button class="control" data-cmd="time15">倒计时15秒</button>
+<div class="live-backup" id="liveBackup">
+ <button class="control next-action" id="nextCorrect" data-cmd="sim_next" disabled>按对下一个按钮（—号）</button>
+ <div id="holdActions" class="hold-actions"><div class="backup-hint">等待玩家进入关卡，自动显示需要长按的号码</div></div>
+ <div id="virtualHeld">GM模拟长按中：无</div>
+ </div>
+</div><p><a href="/" target="_blank">打开玩家投影画面</a></p></aside></main><script>
+let ws,retry;const status=document.getElementById('status');function connect(){ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');ws.onopen=()=>{status.textContent='● 已连接 · GM控制台可用';status.classList.add('on');ws.send(JSON.stringify({type:'role',role:'gm'}))};ws.onclose=()=>{status.textContent='● 连接断开，正在重连';status.classList.remove('on');retry=setTimeout(connect,1500)};ws.onerror=()=>{status.textContent='连接失败';status.classList.remove('on')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}if(m.type==='state')renderState(m.state);if(m.type==='button')showButton(m);if(m.type==='player_online'&&!m.online)offline()}}
+const el=id=>document.getElementById(id);let lastStateAt=0;
+function offline(){el('startInfo').textContent='玩家画面已断线';}
+function renderState(s){
+ if(!s)return;
+ lastStateAt=Date.now();
+ updateMirror(s);
+ renderBackup(s);
+ el('startInfo').textContent=s.screen==='intro'?'启动倒数：'+(s.startCount||'05')+' · '+(s.startMessage||'等待08号'):s.screen==='preview'?'关卡预告倒数：'+(s.countdown||'15')+' 秒':s.screen==='game'?'玩家正在执行防线':'当前画面：'+(s.screen||'—');
+}
+setInterval(()=>{if(lastStateAt&&Date.now()-lastStateAt>2500)offline()},1000);
+const gmHolding=new Set();
+let liveState=null;
+let audioCtx=null;
+function correctTone(){
+ try{
+  audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  const t=audioCtx.currentTime;
+  [[660,0],[880,.12]].forEach(([f,delay])=>{
+   const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=f;
+   g.gain.setValueAtTime(.0001,t+delay);g.gain.exponentialRampToValueAtTime(.07,t+delay+.015);
+   g.gain.exponentialRampToValueAtTime(.0001,t+delay+.16);
+   o.connect(g);g.connect(audioCtx.destination);o.start(t+delay);o.stop(t+delay+.18);
+  });
+ }catch(e){console.warn('GM音效不可用',e)}
+}
+function refreshGmHeld(){el('virtualHeld').textContent='GM模拟长按中：'+(gmHolding.size?[...gmHolding].sort((a,b)=>a-b).map(n=>String(n).padStart(2,'0')).join('、'):'无')}
+function sendGM(cmd,n){
+ if(!ws||ws.readyState!==1){alert('服务器尚未连接');return false}
+ const payload={type:'gm',command:cmd};if(n!=null)payload.button=n;
+ ws.send(JSON.stringify(payload));return true;
+}
+function renderBackup(s){
+ liveState=s;
+ const next=el('nextCorrect');
+ const valid=s.screen==='game'&&s.active&&Number.isInteger(s.nextButton);
+ next.textContent='按对下一个按钮（'+(valid?String(s.nextButton).padStart(2,'0'):'—')+'号）';
+ next.disabled=!valid;
+ const numbers=s.screen==='intro'?[8]:(s.screen==='game'&&s.active&&Array.isArray(s.requiredHold)?s.requiredHold:[]);
+ const area=el('holdActions');area.replaceChildren();
+ if(!numbers.length){const tip=document.createElement('div');tip.className='backup-hint';tip.textContent=s.screen==='preview'?'关卡预告中，开始后显示长按号码':'本阶段不需要长按按钮';area.appendChild(tip)}
+ numbers.forEach((n,i)=>{
+  const slot=document.createElement('div');slot.className='hold-slot';
+  const label=document.createElement('div');label.className='hold-label';label.textContent='长按按钮'+(i+1)+' · '+String(n).padStart(2,'0')+'号';slot.appendChild(label);
+  const held=Array.isArray(s.held)&&s.held.includes(n);
+  const down=document.createElement('button');down.className='control hold-action'+(held?' held':'');down.textContent='按住 '+String(n).padStart(2,'0')+' 号'+(held?' ✓':'');down.disabled=held;
+  down.addEventListener('click',()=>{if(sendGM('sim_hold',n)){gmHolding.add(n);refreshGmHeld()}});slot.appendChild(down);
+  const up=document.createElement('button');up.className='control release-action';up.textContent='松开 '+String(n).padStart(2,'0')+' 号';up.disabled=!held&&!gmHolding.has(n);
+  up.addEventListener('click',()=>{if(sendGM('sim_release',n)){gmHolding.delete(n);refreshGmHeld()}});slot.appendChild(up);
+  area.appendChild(slot);
+ });
+ refreshGmHeld();
+}
+document.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>{
+ if(b.disabled)return;
+ const cmd=b.dataset.cmd;
+ if(cmd==='reset'&&!confirm('确定重置全部游戏进度及警示灯？'))return;
+ if(sendGM(cmd)){
+  if(cmd==='sim_next')correctTone();
+  if(cmd==='reset'){gmHolding.clear();refreshGmHeld()}
+ }
+}));
+// 镜像直接接收玩家页面已渲染的HTML；不会运行第二份游戏JS。
+const mirrorFrame=el('mirror'), mirrorContainer=el('mirrorFrame');
+let mirrorReady=false, lastMirror='';
+function scaleMirror(){const scale=mirrorContainer.clientWidth/1920;mirrorFrame.style.transform='scale('+scale+')'}
+window.addEventListener('resize',scaleMirror);
+if(window.ResizeObserver)new ResizeObserver(scaleMirror).observe(mirrorContainer);
+scaleMirror();
+async function initMirror(){
+ try{
+  const response=await fetch('/',{cache:'no-store'});
+  if(!response.ok)throw new Error('无法获取原版样式');
+  const doc=new DOMParser().parseFromString(await response.text(),'text/html');
+  const styles=Array.from(doc.querySelectorAll('style')).map(s=>s.textContent).join('\n');
+  const frameDoc=mirrorFrame.contentDocument;
+  frameDoc.open();
+  frameDoc.write(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><base href="${location.origin}/"><style>${styles}</style><style>html,body{width:1920px!important;height:1080px!important;overflow:hidden!important;margin:0!important}#viewport{height:1080px!important;min-height:0!important}#connPanel{display:none!important}</style></head><body></body></html>`);
+  frameDoc.close();mirrorReady=true;
+ }catch(e){el('lastButton').textContent='镜像加载失败：'+e.message}
+}
+function updateMirror(s){
+ if(!mirrorReady||!s.mirrorHtml)return;
+ const html=s.mirrorHtml+(s.mirrorToast||'');
+ if(html===lastMirror)return;
+ lastMirror=html;
+ // 服务器只转发玩家页面DOM。镜像iframe不执行脚本或接收按钮。
+ mirrorFrame.contentDocument.body.innerHTML=html;
+}
+function showButton(m){
+ const n=Number(m.button);if(!Number.isInteger(n)||n<1||n>16)return;
+ el('lastButton').textContent='最近按钮：'+String(n).padStart(2,'0')+' 号 · '+(m.down?'按下':'松开')+' · '+new Date().toLocaleTimeString('zh-CN',{hour12:false});
+}
+initMirror();
+connect();
+</script></body></html>
