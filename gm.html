@@ -51,28 +51,14 @@ main.gm-layout{max-width:none;width:100%;margin:0;display:grid;grid-template-col
  <div id="holdActions" class="hold-actions"><div class="backup-hint">等待玩家进入关卡，自动显示需要长按的号码</div></div>
  <div id="virtualHeld">GM模拟长按中：无</div>
  </div>
-</div><p><a href="/" target="_blank">打开玩家投影画面</a></p></aside></main><script>
+</div><p><a href="./" target="_blank">打开玩家投影画面</a></p></aside></main><script>
 const VAULT_ROLE='gm';
 
   function vaultConnection(){
-    const local=['localhost','127.0.0.1'].includes(location.hostname);
-    const defaultHost=local?location.origin:'';
-    let host=sessionStorage.getItem('vaultTunnelUrl')||defaultHost;
-    if(!host){host=prompt('请输入Cloudflare Tunnel网址（https://xxx.trycloudflare.com）','')||'';}
-    host=host.trim().replace(/\/+$/,'');
-    if(!/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(host)&&!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host)){
-      alert('联机地址必须是HTTPS Tunnel网址，或本机localhost');return null;
-    }
-    sessionStorage.setItem('vaultTunnelUrl',host);
-    const role=VAULT_ROLE;
-    const storageKey='vault'+(role==='gm'?'Gm':'Player')+'Key';
-    let key=sessionStorage.getItem(storageKey)||prompt(role==='gm'?'请输入GM专用口令':'请输入玩家投影专用口令','')||'';
-    if(!key){alert('没有口令，不能连接');return null;}
-    sessionStorage.setItem(storageKey,key);
-    return {url:host.replace(/^http/,'ws')+'/ws',key};
+    return {url:'wss://village-vault-server.chunweilow7901.workers.dev/ws'};
   }
-  // 修改Tunnel地址或口令：在浏览器控制台执行 sessionStorage.clear() 后刷新
-let ws,retry;const status=document.getElementById('status');function connect(){const cfg=vaultConnection();if(!cfg)return;ws=new WebSocket(cfg.url);ws.onopen=()=>{status.textContent='● 正在核验GM身份…';ws.send(JSON.stringify({type:'role',role:'gm',key:sessionStorage.getItem('vaultGmKey')}))};ws.onclose=()=>{status.textContent='● 连接断开，正在重连';status.classList.remove('on');retry=setTimeout(connect,1500)};ws.onerror=()=>{status.textContent='连接失败';status.classList.remove('on')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}if(m.type==='auth'){if(m.ok){status.textContent='● 已认证 · GM控制台可用';status.classList.add('on')}else{status.textContent='● GM口令错误';sessionStorage.removeItem('vaultGmKey')}}if(m.type==='state')renderState(m.state);if(m.type==='button')showButton(m);if(m.type==='player_online'&&!m.online)offline()}}
+
+let ws,retry;const status=document.getElementById('status');function connect(){const cfg=vaultConnection();if(!cfg)return;ws=new WebSocket(cfg.url);ws.onopen=()=>{status.textContent='● 正在核验GM身份…';ws.send(JSON.stringify({type:'role',role:'gm'}))};ws.onclose=()=>{status.textContent='● 连接断开，正在重连';status.classList.remove('on');retry=setTimeout(connect,1500)};ws.onerror=()=>{status.textContent='连接失败';status.classList.remove('on')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}if(m.type==='auth'){if(m.ok){status.textContent='● 已认证 · GM控制台可用';status.classList.add('on')}else{status.textContent='● GM口令错误';void 0}}if(m.type==='state')renderState(m.state);if(m.type==='button')showButton(m);if(m.type==='player_online'&&!m.online)offline()}}
 const el=id=>document.getElementById(id);let lastStateAt=0;
 function offline(){el('startInfo').textContent='玩家画面已断线';}
 function renderState(s){
@@ -144,13 +130,13 @@ if(window.ResizeObserver)new ResizeObserver(scaleMirror).observe(mirrorContainer
 scaleMirror();
 async function initMirror(){
  try{
-  const response=await fetch('/',{cache:'no-store'});
+  const response=await fetch('./',{cache:'no-store'});
   if(!response.ok)throw new Error('无法获取原版样式');
   const doc=new DOMParser().parseFromString(await response.text(),'text/html');
   const styles=Array.from(doc.querySelectorAll('style')).map(s=>s.textContent).join('\n');
   const frameDoc=mirrorFrame.contentDocument;
   frameDoc.open();
-  frameDoc.write(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><base href="${location.origin}/"><style>${styles}</style><style>html,body{width:1920px!important;height:1080px!important;overflow:hidden!important;margin:0!important}#viewport{height:1080px!important;min-height:0!important}#connPanel{display:none!important}</style></head><body></body></html>`);
+  frameDoc.write(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><base href="${new URL('./',location.href).href}"><style>${styles}</style><style>html,body{width:1920px!important;height:1080px!important;overflow:hidden!important;margin:0!important}#viewport{height:1080px!important;min-height:0!important}#connPanel{display:none!important}</style></head><body></body></html>`);
   frameDoc.close();mirrorReady=true;
  }catch(e){el('lastButton').textContent='镜像加载失败：'+e.message}
 }
