@@ -369,33 +369,19 @@ body.player #connPanel{opacity:.8;font-size:13px;bottom:2px;right:3px;padding:3p
   const VAULT_ROLE='player';
 
   function vaultConnection(){
-    const local=['localhost','127.0.0.1'].includes(location.hostname);
-    const defaultHost=local?location.origin:'';
-    let host=sessionStorage.getItem('vaultTunnelUrl')||defaultHost;
-    if(!host){host=prompt('请输入Cloudflare Tunnel网址（https://xxx.trycloudflare.com）','')||'';}
-    host=host.trim().replace(/\/+$/,'');
-    if(!/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(host)&&!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host)){
-      alert('联机地址必须是HTTPS Tunnel网址，或本机localhost');return null;
-    }
-    sessionStorage.setItem('vaultTunnelUrl',host);
-    const role=VAULT_ROLE;
-    const storageKey='vault'+(role==='gm'?'Gm':'Player')+'Key';
-    let key=sessionStorage.getItem(storageKey)||prompt(role==='gm'?'请输入GM专用口令':'请输入玩家投影专用口令','')||'';
-    if(!key){alert('没有口令，不能连接');return null;}
-    sessionStorage.setItem(storageKey,key);
-    return {url:host.replace(/^http/,'ws')+'/ws',key};
+    return {url:'wss://village-vault-server.chunweilow7901.workers.dev/ws'};
   }
-  // 修改Tunnel地址或口令：在浏览器控制台执行 sessionStorage.clear() 后刷新
+
   function connect(){
     if(location.protocol==='file:') {status(false,'请用 localhost:8765 打开');return;}
     const cfg=vaultConnection();if(!cfg)return;
     socket=new WebSocket(cfg.url);
-    socket.onopen=()=>{status(true,'网页联机已连接');socket.send(JSON.stringify({type:'role',role:'player',key:sessionStorage.getItem('vaultPlayerKey')}));sendState();};
+    socket.onopen=()=>{status(true,'网页联机已连接');socket.send(JSON.stringify({type:'role',role:'player'}));sendState();};
     socket.onclose=()=>{status(false,'联机断开，重连中');pressed.clear();retry=setTimeout(connect,1500);};
     socket.onerror=()=>status(false,'联机连接错误');
     socket.onmessage=event=>{
       let m;try{m=JSON.parse(event.data)}catch{return}
-      if(m.type==='auth'&&!m.ok){status(false,'联机口令不正确，请检查');sessionStorage.removeItem('vaultPlayerKey');return}
+      if(m.type==='auth'&&!m.ok){status(false,'联机口令不正确，请检查');void 0;return}
       if(m.type==='gm'){const cmd=m.command;if(cmd==='bell')gmBell();else if(cmd==='remove_error'){if(errors>0&&!finished){errors--;renderSecurity();notice('管家撤销一盏警示灯')}}else if(cmd==='skip'){if(active)stageComplete()}else if(cmd==='reset'){gmHeld.clear();reset();}else if(cmd==='time30'){if(active&&STAGES[stage].time)startClock(30)}else if(cmd==='time15'){if(active&&STAGES[stage].time)startClock(15)}
       else if(cmd==='sim_hold'){
         // GM可以指定任意号码。与实体按钮一样遵守当前关卡的规则。
